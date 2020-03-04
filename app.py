@@ -1,6 +1,7 @@
 import os
 import time
 import datetime
+import math
 from bitmex import bitmex
 from bitmex_websocket import BitMEXWebsocket
 from dotenv import load_dotenv
@@ -12,6 +13,9 @@ Load in the environment variables as soon as the script is run
 """
 
 load_dotenv()
+
+def calculate_leverage(position, marginBTC, price):
+    return position / ((marginBTC / 100000000) * price)
 
 
 class BitMEXTrader():
@@ -26,7 +30,7 @@ class BitMEXTrader():
         self.__initialize_socket()
         self.tradeState = 1  # 1 means ready to take a trade
         self.client = bitmex(
-            test=True,
+            test=os.getenv('BITMEX_IS_TEST') == 'yes',
             api_key=os.getenv('BITMEX_API_KEY'),
             api_secret=os.getenv('BITMEX_API_SECRET')
         )
@@ -41,42 +45,80 @@ class BitMEXTrader():
         # FUNDS() GIVES MARGIN BALANCE
         TradeLogger.log_wallet_data(self.socket.funds())
 
-    def long(self, price, quantity):
-        unix_timestamp = str(round(time.time()))
+    def market_buy(self, quantity):
+        print("==== BUY ======")
+        print('MARKET BUY -- Qty: ', quantity)
+        print("===============")
+        self.client.Order.Order_new(symbol='XBTUSD', ordType='Market', orderQty=int(quantity), text='Enter Market Long').result()
 
-        self.client.Order.Order_cancelAll().result()
-        # Entry Order
-        self.client.Order.Order_new(symbol='XBTUSD', ordType='Market', orderQty=int(
-            quantity), text='Enter Long', clOrdID='long-' + unix_timestamp + '-entry').result()
-        # Sell Order
-        self.client.Order.Order_new(symbol='XBTUSD', ordType='Stop', pegPriceType="TrailingStopPeg", pegOffsetValue=-1 * round(
-            price * 0.0025 * 2)/2, orderQty=-1 * int(quantity), execInst='LastPrice', text="Close Long", clOrdID='long-' + unix_timestamp + '-exit').result()
+    def market_sell(self, quantity):
+        print("==== SELL ======")
+        print('MARKET SELL -- Qty: ', quantity)
+        print("================")
+        self.client.Order.Order_new(symbol='XBTUSD', ordType='Market', orderQty=(-int(quantity)), text='Enter Market Short').result()
 
+    '''
+    MB: 0.0011 / Price: 8742
+    Position	Leverage
+        1	         0.1039911815
+        2	         0.2079823631
+        3	         0.3119735446
+        4	         0.4159647262
+        5	         0.5199559077
+        6	         0.6239470893
+        7	         0.7279382708
+        8	         0.8319294524
+        9	         0.9359206339
+        10         1.039911815
 
-    def short(self, price, quantity):
-        unix_timestamp = str(round(time.time()))
-
-        self.client.Order.Order_cancelAll().result()
-        # Buy Order
-        self.client.Order.Order_new(symbol='XBTUSD', ordType='Market', orderQty=int(
-            quantity), text='Enter Short', clOrdID='short-' + unix_timestamp + '-entry').result()
-        # Sell Order
-        self.client.Order.Order_new(symbol='XBTUSD', ordType='Stop', pegPriceType="TrailingStopPeg", pegOffsetValue=round(
-            price * 0.0025 * 2)/2, orderQty=-1 * int(quantity), execInst='LastPrice', text="Close Short", clOrdID='short-' + unix_timestamp + '-exit').result()
-
+    price - => leverage + => buy/long
+    price + => leverage - => sell/short
+    '''
     def run(self):
+        last_leverage = 0
         while(self.socket.ws.sock.connected):
+            # instruments = self.socket.get_instrument()
+            position = self.socket.positions()
+            wallet = self.socket.funds()
             ticker = self.socket.get_ticker()
-            position =  self.socket.positions()
-            TradeLogger.log_tick(ticker)
-            TradeLogger.log_positions(position)
-            # TradeLogger.log_instrument_data()
 
-            if ticker['buy'] < ticker['last']:
-                self.long(ticker['buy'], 10)
-            elif ticker['sell'] > ticker['last']:
-                self.short(ticker['sell'], 10)
-            sleep(3600) # 1 hour
+            # TradeLogger.log_positions(position)
+            # TradeLogger.log_tick(ticker)
+            # TradeLogger.log_instrument_data(instruments)
+
+            current_pos = 0
+            if position:
+                current_pos = position[0]['currentQty']
+
+            margin_btc = wallet['marginBalance']
+            last_price = ticker['last']
+
+            leverage = calculate_leverage(current_pos, margin_btc, last_price)
+            abs_leverage = abs(leverage)
+            lev_per_pos = calculate_leverage(1, margin_btc, last_price)
+            lower_lev = 0.7 - lev_per_pos
+            upper_lev = 0.7 + lev_per_pos
+
+            TradeLogger.log_wallet_data(wallet)
+            print('last leverage           : ', last_leverage)
+            print('current leverage        : ', leverage)
+            print('difference              : ', leverage - last_leverage)
+            print('current position        : ', current_pos)
+            print('Leverage per Position   : ', lev_per_pos)
+            print('Sell when Leverage is < : ', lower_lev)
+            print('Buy when Leverage is  > : ', upper_lev)
+
+
+            if abs_leverage <= lower_lev:
+                qty = round((0.7 - abs_leverage) / lev_per_pos)
+                self.market_sell(qty)
+            elif abs_leverage > upper_lev:
+                qty = round((abs_leverage - 0.7) / lev_per_pos)
+                self.market_buy(qty)
+
+
+            last_leverage = leverage
+            sleep(60) # 1 minute wait
 
 
 trader_bot = BitMEXTrader()
