@@ -75,7 +75,9 @@ class BitMEXTrader():
     price + => leverage - => sell/short
     '''
     def run(self):
+        TARGET_LEVERAGE = 0.9
         last_leverage = 0
+
         while(self.socket.ws.sock.connected):
             # instruments = self.socket.get_instrument()
             position = self.socket.positions()
@@ -96,8 +98,8 @@ class BitMEXTrader():
             leverage = calculate_leverage(current_pos, margin_btc, last_price)
             abs_leverage = abs(leverage)
             lev_per_pos = calculate_leverage(1, margin_btc, last_price)
-            lower_lev = 0.9 - lev_per_pos
-            upper_lev = 0.9 + lev_per_pos
+            lower_lev = TARGET_LEVERAGE - lev_per_pos
+            upper_lev = TARGET_LEVERAGE + lev_per_pos
 
             TradeLogger.log_wallet_data(wallet)
             print('last leverage           : ', last_leverage)
@@ -110,10 +112,10 @@ class BitMEXTrader():
 
 
             if abs_leverage <= lower_lev:
-                qty = round((0.7 - abs_leverage) / lev_per_pos)
+                qty = round((TARGET_LEVERAGE - abs_leverage) / lev_per_pos)
                 self.market_sell(qty)
             elif abs_leverage > upper_lev:
-                qty = round((abs_leverage - 0.7) / lev_per_pos)
+                qty = round((abs_leverage - TARGET_LEVERAGE) / lev_per_pos)
                 self.market_buy(qty)
 
 
