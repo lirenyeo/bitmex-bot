@@ -96,8 +96,8 @@ class BitMEXTrader():
             leverage = calculate_leverage(current_pos, margin_btc, last_price)
             abs_leverage = abs(leverage)
             lev_per_pos = calculate_leverage(1, margin_btc, last_price)
-            lower_lev = 0.7 - lev_per_pos
-            upper_lev = 0.7 + lev_per_pos
+            lower_lev = 0.9 - lev_per_pos
+            upper_lev = 0.9 + lev_per_pos
 
             TradeLogger.log_wallet_data(wallet)
             print('last leverage           : ', last_leverage)
