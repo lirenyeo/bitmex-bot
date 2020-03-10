@@ -14,6 +14,13 @@
    BITMEX_IS_TESTNET="yes"
    BITMEX_API_KEY=""
    BITMEX_API_SECRET=""
+   STRATEGY_NAME="short1x"
    ```
 
   By set `BITMEX_IS_TESTNET` to `"yes"` or "`no"`, the websocket will connect to the respective testnet/live URL.
+
+#### Strategies Available:
+
+`short1x`: Negative target leverage. Short to increase leverage.
+`long1x`: Positive target leverage. Long to increase leverage.
+`ma-cross`: Toggle between short1x and long1x when MA20/50 crosses.
