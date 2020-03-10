@@ -1,7 +1,6 @@
 appdirs==1.4.3
 attrs==19.3.0
 bitmex==0.2.2
-bitmex-ws==0.4.0
 black==19.10b0
 bravado==10.5.0
 bravado-core==5.16.1

@@ -4,7 +4,7 @@ import datetime
 import math
 from configuration import *
 from bitmex import bitmex
-from bitmex_websocket import BitMEXWebsocket
+from bitmexlib.bitmex_websocket import BitMEXWebsocket
 from dotenv import load_dotenv
 from time import sleep
 from logger import TradeLogger
@@ -78,7 +78,7 @@ class BitMEXTrader:
     """
 
     def run(self):
-        TARGET_LEVERAGE = 0.9
+        TARGET_LEVERAGE = 0.4
         last_leverage = 0
 
         while self.socket.ws.sock.connected:
