@@ -36,7 +36,7 @@ class Logger:
         self.logger.info(red("**********************\n"))
 
     def log_tick_start(self, last, buy, sell, tick_interval):
-        self.logger.info(magenta(f"Tick #{self.tick_count} (Interval: {tick_interval}s)"))
+        self.logger.info(magenta(f"\nTick #{self.tick_count} (Interval: {tick_interval}s)"))
         self.logger.info(green(f"------- {current_time()} -------"))
         self.logger.info(yellow(f"Last: {last} | Buy: {buy} | Sell: {sell}"))
         self.tick_count += 1
