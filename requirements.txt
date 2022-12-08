@@ -4,7 +4,7 @@ bitmex==0.2.2
 black==19.10b0
 bravado==10.5.0
 bravado-core==5.16.1
-certifi==2019.11.28
+certifi==2022.12.7
 chardet==3.0.4
 Click==7.0
 colorama==0.4.3
